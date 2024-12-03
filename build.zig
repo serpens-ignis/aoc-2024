@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    inline for (1..3) |i| {
+    inline for (1..4) |i| {
         const num = std.fmt.comptimePrint("{}", .{i});
         const exe = b.addExecutable(.{
             .name = "day_" ++ num,
@@ -13,12 +13,19 @@ pub fn build(b: *std.Build) !void {
         });
         b.installArtifact(exe);
 
-        exe.root_module.addAnonymousImport("input", .{
-            .root_source_file = b.path("input/" ++ num ++ ".txt"),
-        });
-        exe.root_module.addAnonymousImport("example", .{
-            .root_source_file = b.path("examples/" ++ num ++ ".txt"),
-        });
+        const input_files = [_]std.meta.Tuple(&.{ []const u8, []const u8 }){
+            .{ "input", "input/" ++ num ++ ".txt" },
+            .{ "example", "examples/" ++ num ++ ".txt" },
+            .{ "example1", "examples/" ++ num ++ "_1.txt" },
+            .{ "example2", "examples/" ++ num ++ "_2.txt" },
+        };
+
+        for (input_files) |tp| {
+            std.fs.cwd().access(tp[1], .{}) catch continue;
+            exe.root_module.addAnonymousImport(tp[0], .{
+                .root_source_file = b.path(tp[1]),
+            });
+        }
 
         const run_cmd = b.addRunArtifact(exe);
         run_cmd.step.dependOn(b.getInstallStep());
